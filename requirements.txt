@@ -2,3 +2,5 @@ requests==2.26.0
 pyqt5==5.15.4
 pyqt5-tools==5.15.4.3.2
 pyqt5-stubs==5.15.2.0
+beautifulsoup4==4.10.0
+lxml==4.6.4

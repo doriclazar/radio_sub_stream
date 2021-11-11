@@ -1,7 +1,10 @@
 import sys
 import json
+import re
+from json import loads, JSONDecodeError
 import os
 import requests
+from bs4 import BeautifulSoup
 from PyQt5.QtCore import QUrl, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout,
@@ -44,6 +47,14 @@ class MainWindow(QWidget):
         self.play_stop_button = LSquareButton('', self.play_stop, 'fixtures/img/play.png')
         self.create_control_panel()
 
+    def download_icon(self, icon_url, icon_name):
+        icon_path = f'data/icons/{icon_name}.ico'
+        if not os.path.exists(icon_path):
+            icon_response = requests.get(icon_url)
+            with open(icon_path, 'wb') as icon_file:
+                icon_file.write(icon_response.content)
+        return icon_path
+
     def create_info_panel(self):
         """ Creates a panel with widgets for info display at the top of the main window."""
 
@@ -55,14 +66,12 @@ class MainWindow(QWidget):
             os.makedirs('data/icons')
         for radio_station in radio_stations:
             icon_name = radio_station['name'].replace(' ', '-')
-            icon_path = f'data/icons/{icon_name}.ico'
-            if not os.path.exists(icon_path):
-                icon_response = requests.get(radio_station['icon'])
-                with open(icon_path, 'wb') as icon_file:
-                    icon_file.write(icon_response.content)
+            icon_path = self.download_icon(icon_url=radio_station['icon'], icon_name=icon_name)
 
             radio_widgets[radio_station['name']] = QListWidgetItem(radio_station['name'])
             radio_widgets[radio_station['name']].setData(3, radio_station['url'])
+            radio_widgets[radio_station['name']].setData(4, radio_station['history_url'])
+            radio_widgets[radio_station['name']].setData(5, radio_station['history_path'])
             radio_widgets[radio_station['name']].setIcon(QIcon(icon_path))
             self.stations_list.addItem(radio_widgets[radio_station['name']])
 
@@ -71,8 +80,8 @@ class MainWindow(QWidget):
         self.stations_list.currentItemChanged.connect(self.get_recent_tracks)
         info_layout.addWidget(self.stations_list)
 
-        history_box = QTextEdit()
-        info_layout.addWidget(history_box)
+        self.history_box = QListWidget()
+        info_layout.addWidget(self.history_box)
 
         lyrics_box = QTextEdit()
         info_layout.addWidget(lyrics_box)
@@ -95,11 +104,11 @@ class MainWindow(QWidget):
         control_layout.addWidget(volume_slider)
         control_layout.addStretch(1)
 
-        previous_preview_button = LSquareButton('', self.previous_preview, 'fixtures/img/previous.png')
-        control_layout.addWidget(previous_preview_button)
-
         previous_play_button = LSquareButton('', self.previous_play, 'fixtures/img/step-backward.png')
         control_layout.addWidget(previous_play_button)
+
+        previous_preview_button = LSquareButton('', self.previous_preview, 'fixtures/img/previous.png')
+        control_layout.addWidget(previous_preview_button)
 
         control_layout.addWidget(self.play_stop_button)
 
@@ -136,7 +145,53 @@ class MainWindow(QWidget):
 
     def get_recent_tracks(self, sender_item):
         """ Displays song history for a selected radio station."""
-        print(sender_item.data(3))
+        response = requests.get(sender_item.data(4))
+        self.history_box.clear()
+        steps = sender_item.data(5).split(',')
+        try:
+            history = loads(response.content)
+            for step in steps:
+                history = history[step]
+        except JSONDecodeError as e:
+            history_xml = BeautifulSoup(response.content, 'html.parser')
+            history = []
+            try:
+                for step_index in range(len(steps)):
+                    if step_index < len(steps)-1:
+                        history_xml = history_xml.find(f'{steps[step_index]}')
+                    else:
+                        history_xml = history_xml.find_all(f'{steps[step_index]}')
+
+                for song in history_xml:
+                    history.append({
+                        'title': song.title.text,
+                        'artist': song.artist.text,
+                        'album': song.album.text,
+                        'cover': song.albumart.text
+                    })
+
+            except Exception as e:
+                print(type(e).__name__)
+                print(e)
+                return
+
+        except Exception as e:
+            print(type(e).__name__)
+            return
+
+        for song in history:
+            history_item = QListWidgetItem()
+            history_item.setText(f'{song["artist"]} - {song["title"]}')
+            if song['cover'].replace(' ', ''):
+                unprocessed_name = f'{song["artist"]}_{song["title"]}'.replace(' ', '_').replace('-', '_')
+                icon_name = re.sub(r'[^a-zA-Z0-9_]', '', unprocessed_name)
+                icon_path = self.download_icon(icon_url=song['cover'], icon_name=icon_name)
+                history_item.setIcon(QIcon(icon_path))
+            self.history_box.addItem(history_item)
+
+        # parsed_page = BeautifulSoup(response.content, 'lxml')
+        # history = str(parsed_page)
+
 
     def switch_the_station(self, sender_item):
         """ Plays selected radio station."""
