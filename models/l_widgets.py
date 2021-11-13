@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QPushButton, QListWidget
+from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtGui import QIcon
 
 
