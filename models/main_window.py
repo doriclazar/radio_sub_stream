@@ -5,7 +5,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from PyQt5.QtCore import QUrl, Qt
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtWidgets import (QTextEdit, QWidget, QVBoxLayout, QHBoxLayout,
                              QSlider, QListWidget, QListWidgetItem, QGroupBox, QLabel)
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
@@ -29,21 +29,21 @@ class MainWindow(QWidget):
 
         self.stations_list = QListWidget()
         self.history_list = QListWidget()
-        self.create_info_panel()
+        self._create_info_panel()
 
         self.media_player = QMediaPlayer()
         self.media_player.setMedia(QMediaContent(QUrl(radio_stations[0]['url'])))
         self.media_player.stateChanged.connect(self.update_play_stop_button)
 
         self.play_stop_button = LSquareButton('', self.play_stop, 'fixtures/img/play.png')
-        self.create_control_panel()
+        self._create_control_panel()
 
     @staticmethod
     def download_icon(icon_url, icon_name):
         """ Downloads icon, and saves it to data path.
-        :param icon_url:
-        :param icon_name:
-        :return icon_path:
+        param icon_url:
+        param icon_name:
+        return icon_path:
         """
         icon_path = f'data/icons/{icon_name}.ico'
         if os.path.exists(icon_path):
@@ -53,7 +53,7 @@ class MainWindow(QWidget):
             icon_file.write(icon_response.content)
         return icon_path
 
-    def create_info_panel(self):
+    def _create_info_panel(self):
         """ Creates a panel with widgets for info display at the top of the main window."""
 
         # Stations list part
@@ -86,14 +86,16 @@ class MainWindow(QWidget):
         history_group.setLayout(history_layout)
 
         # Song info part
-
         self.song_info_icon = QLabel()
         self.song_info_icon.setMaximumSize(300, 300)
         self.song_info_icon.setScaledContents(True)
         self.song_info_icon.setPixmap(QPixmap('fixtures/img/default_pixmap.ico'))
 
+        song_info_edit_font = QFont()
+        song_info_edit_font.setPointSize(16)
         self.song_info_edit = QTextEdit()
         self.song_info_edit.setReadOnly(True)
+        self.song_info_edit.setFont(song_info_edit_font)
 
         song_info_layout = QHBoxLayout()
         song_info_layout.addWidget(self.song_info_icon)
@@ -109,7 +111,7 @@ class MainWindow(QWidget):
 
         self.main_layout.addWidget(song_info_group)
 
-    def create_control_panel(self):
+    def _create_control_panel(self):
         """ Creates a panel with widgets for control over radio stations at the bottom of the main window."""
 
         control_group = QGroupBox()
@@ -148,7 +150,7 @@ class MainWindow(QWidget):
             self.stations_list.setCurrentRow(current_row-1)
 
     def previous_play(self):
-        """ Selects previous radio station, and runs it's stream."""
+        """ Selects previous radio station, and runs its stream."""
         self.previous_preview()
         self.switch_the_station(self.stations_list.selectedItems()[0])
 
@@ -159,7 +161,7 @@ class MainWindow(QWidget):
             self.stations_list.setCurrentRow(current_row + 1)
 
     def next_play(self):
-        """ Selects next radio station, and runs it's stream."""
+        """ Selects next radio station, and runs its stream."""
         self.next_preview()
         self.switch_the_station(self.stations_list.selectedItems()[0])
 
@@ -170,7 +172,7 @@ class MainWindow(QWidget):
             return
         if sender_item.data(5):
             unprocessed_name = f'{sender_item.data(3)}_{sender_item.data(4)}'.replace(' ', '_').replace('-', '_')
-            icon_name = re.sub(r'[^a-zA-Z0-9_]', '', unprocessed_name)
+            icon_name = re.sub(r'\W', '', unprocessed_name)
             icon_path = self.download_icon(icon_url=sender_item.data(5), icon_name=icon_name)
 
             self.song_info_icon.setPixmap(QPixmap(icon_path))
@@ -183,7 +185,6 @@ class MainWindow(QWidget):
         lyrics: {None}
         '''
         self.song_info_edit.append(song_string)
-
 
     def get_recent_tracks(self, sender_item):
         """ Displays song history for a selected radio station."""
@@ -266,8 +267,8 @@ class MainWindow(QWidget):
 
     def keyPressEvent(self, key_event):
         """ Checks all keyboard inputs, executes "MainWindow.switch_the_station()" if return key is pressed.
-        :param key_event: Keyboard key press event.
-        :type key_event: QKeyEvent
+        param key_event: Keyboard key press event.
+        type key_event: QKeyEvent
         """
         if key_event.key() == Qt.Key_Return:
             self.switch_the_station(self.stations_list.selectedItems()[0])
