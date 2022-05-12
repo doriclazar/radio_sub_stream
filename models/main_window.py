@@ -43,7 +43,6 @@ class MainWindow(QWidget):
         self.main_layout.addWidget(self.song_info_group)
         self.main_layout.addWidget(self.control_group)
 
-
     def get_recent_tracks(self, sender_item):
         """ Displays song history for a selected radio station."""
         response = requests.get(sender_item.data(4))
@@ -65,6 +64,7 @@ class MainWindow(QWidget):
                         history_xml = history_xml.find_all(f'{steps[step_index]}')
 
                 for song in history_xml:
+                    print(song)
                     history.append({
                         'title': song.title.text,
                         'artist': song.artist.text,

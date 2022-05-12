@@ -1,6 +1,7 @@
 import os
 import requests
 
+
 def download_icon(icon_url, icon_name):
     """ Downloads icon, and saves it to data path.
     param icon_url:
@@ -14,4 +15,3 @@ def download_icon(icon_url, icon_name):
     with open(icon_path, 'wb') as icon_file:
         icon_file.write(icon_response.content)
     return icon_path
-
